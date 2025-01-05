@@ -85,6 +85,7 @@ json
 }
 
 --------------------------------------------------------------------------------------------------------------------------------
+
 Conclusion:
 This system efficiently integrates Spring Boot for API management and FastAPI for backend processing, making it scalable and efficient. The use of Postman for testing ensures that the features work seamlessly under different scenarios, ready for real-world deployment.
 
