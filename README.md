@@ -55,7 +55,7 @@ json
   "recommended_videos": [789, 101, 102]
 }
 
-2. Content Moderation:
+2. Content Moderation: 
 ----------------------
 
 POST /moderation/
