@@ -36,7 +36,7 @@ Scalability: Each component scales independently.
 Efficiency: FastAPI ensures fast processing of machine learning and backend tasks.
 Postman Testing:
 
-1. Video Recommendations:
+1. Video Recommendations: 
 -------------------------
 POST /recommendations/
 Input:
