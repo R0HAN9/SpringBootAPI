@@ -73,7 +73,7 @@ json
   "moderation_status": "Rejected"
 }
 
-3. Ad Targeting:
+3. Ad Targeting: 
 ----------------
 GET /ad-targeting?user_id=123&video_id=456
 Input: user_id=123, video_id=456
