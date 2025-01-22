@@ -3,7 +3,7 @@ Project Summary: YouTube Backend System with Spring Boot and FastAPI!
 --------------------------------------------------------------------
 
 Overview:
-This project integrates Spring Boot with FastAPI to provide key features: 
+This project integrates Spring Boot with FastAPI to provide key features:
 --------------------------------------------------------------------------
 
 Video Recommendations
