@@ -15,7 +15,7 @@ Spring Boot serves as a gateway, receiving user requests and forwarding them to 
 FastAPI handles the heavy lifting like machine learning for recommendations, content moderation, and ad targeting.
 
 
-Workflow: 
+Workflow:
 User Request to Spring Boot: The user initiates a request (e.g., recommendations, content moderation, or ad targeting).
 Spring Boot Forwards to FastAPI: Spring Boot uses RestTemplate to forward the request to FastAPI's endpoints.
 FastAPI Processes Request: FastAPI processes the request and returns a result (e.g., recommendations, moderation status, or targeted ads).
