@@ -1,37 +1,111 @@
-package com.YouTube.Backend;
+// FastApiService.java - Service layer for FastAPI integration
 
-// Importing necessary Spring Boot libraries for application setup and REST functionality
-import org.springframework.boot.SpringApplication;
-import org.springframework.boot.autoconfigure.SpringBootApplication;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RestController;
+package com.YouTube.Backend.services;
 
-/**
- * Main entry point for the YouTube Backend application.
- * This class sets up the Spring Boot application and defines a basic REST endpoint.
- */
-@SpringBootApplication // Marks this class as the configuration and entry point for the Spring Boot application
-@RestController // Combines @Controller and @ResponseBody for simplified REST API development
-public class BackendApplication {
+import com.YouTube.Backend.models.AdTargetingRequest;
+import com.YouTube.Backend.models.ModerationRequest;
+import com.YouTube.Backend.models.RecommendationRequest;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.*;
+import org.springframework.stereotype.Service;
+import org.springframework.web.client.RestClientException;
+import org.springframework.web.client.RestTemplate;
 
-    /**
-     * Main method to launch the Spring Boot application.
-     * SpringApplication.run initializes the application context and starts the embedded server (e.g., Tomcat).
-     *
-     * @param args Command-line arguments passed to the application
-     */
-    public static void main(String[] args) {
-        SpringApplication.run(BackendApplication.class, args); // Bootstraps the application
+import java.util.Map;
+
+@Service
+public class FastApiService {
+
+    private static final Logger logger = LoggerFactory.getLogger(FastApiService.class);
+    private final RestTemplate restTemplate;
+
+    @Value("${fastapi.base.url:http://localhost:8000}")
+    private String fastApiBaseUrl;
+
+    public FastApiService() {
+        this.restTemplate = new RestTemplate();
     }
 
     /**
-     * A simple GET endpoint for health check or introductory response.
-     * In production, this can be replaced or extended to provide detailed service status.
-     *
-     * @return A greeting message ("Hello World!")
+     * Check if FastAPI service is healthy
      */
-    @GetMapping // Maps HTTP GET requests to this method
-    public String sayHello() {
-        return "Hello World!"; // Basic response to verify the service is running
+    public ResponseEntity<String> checkHealth() {
+        try {
+            String url = fastApiBaseUrl + "/health";
+            ResponseEntity<String> response = restTemplate.getForEntity(url, String.class);
+            logger.info("FastAPI health check successful");
+            return response;
+        } catch (RestClientException e) {
+            logger.error("FastAPI health check failed: {}", e.getMessage());
+            throw e;
+        }
+    }
+
+    /**
+     * Get video recommendations from FastAPI
+     */
+    public ResponseEntity<String> getRecommendations(RecommendationRequest request) {
+        try {
+            String url = fastApiBaseUrl + "/recommendations/";
+            HttpHeaders headers = createHeaders();
+            HttpEntity<RecommendationRequest> entity = new HttpEntity<>(request, headers);
+            
+            ResponseEntity<String> response = restTemplate.postForEntity(url, entity, String.class);
+            logger.info("Recommendation request successful for user_id: {}", request.getUser_id());
+            return response;
+            
+        } catch (RestClientException e) {
+            logger.error("Recommendation request failed: {}", e.getMessage());
+            throw e;
+        }
+    }
+
+    /**
+     * Moderate video content via FastAPI
+     */
+    public ResponseEntity<String> moderateContent(ModerationRequest request) {
+        try {
+            String url = fastApiBaseUrl + "/moderation/";
+            HttpHeaders headers = createHeaders();
+            HttpEntity<ModerationRequest> entity = new HttpEntity<>(request, headers);
+            
+            ResponseEntity<String> response = restTemplate.postForEntity(url, entity, String.class);
+            logger.info("Moderation request successful for video_id: {}", request.getVideo_id());
+            return response;
+            
+        } catch (RestClientException e) {
+            logger.error("Moderation request failed: {}", e.getMessage());
+            throw e;
+        }
+    }
+
+    /**
+     * Get ad targeting recommendations from FastAPI
+     */
+    public ResponseEntity<String> getAdTargeting(AdTargetingRequest request) {
+        try {
+            String url = fastApiBaseUrl + "/ad-targeting/";
+            HttpHeaders headers = createHeaders();
+            HttpEntity<AdTargetingRequest> entity = new HttpEntity<>(request, headers);
+            
+            ResponseEntity<String> response = restTemplate.postForEntity(url, entity, String.class);
+            logger.info("Ad targeting request successful for user_id: {}", request.getUser_id());
+            return response;
+            
+        } catch (RestClientException e) {
+            logger.error("Ad targeting request failed: {}", e.getMessage());
+            throw e;
+        }
+    }
+
+    /**
+     * Create HTTP headers for requests
+     */
+    private HttpHeaders createHeaders() {
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        return headers;
     }
 }
