@@ -1,175 +1,136 @@
-import org.springframework.http.*;
-import org.springframework.validation.annotation.Validated;
+// FastApiController.java - Controller for FastAPI integration
+
+package com.YouTube.Backend.controllers;
+
+import com.YouTube.Backend.models.AdTargetingRequest;
+import com.YouTube.Backend.models.ModerationRequest;
+import com.YouTube.Backend.models.RecommendationRequest;
+import com.YouTube.Backend.services.FastApiService;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-import org.springframework.web.client.*;
-import javax.validation.Valid;
-import javax.validation.constraints.NotNull;
+import org.springframework.web.client.RestClientException;
+
 import java.util.Map;
 
 @RestController
-@RequestMapping("/fastapi")
-@Validated
+@RequestMapping("/api/ml")
+@CrossOrigin(origins = "*") // Configure as needed for your frontend
 public class FastApiController {
 
-    private final RestTemplate restTemplate;
-    private static final String FASTAPI_BASE_URL = "http://localhost:8000"; // Base URL for FastAPI services
+    private static final Logger logger = LoggerFactory.getLogger(FastApiController.class);
+    
+    @Autowired
+    private FastApiService fastApiService;
 
-    // Constructor for injecting RestTemplate dependency
-    public FastApiController(RestTemplate restTemplate) {
-        this.restTemplate = restTemplate;
+    /**
+     * Health check endpoint for FastAPI integration
+     */
+    @GetMapping("/health")
+    public ResponseEntity<Object> checkFastApiHealth() {
+        try {
+            ResponseEntity<String> response = fastApiService.checkHealth();
+            return ResponseEntity.ok(Map.of(
+                "status", "FastAPI service is healthy",
+                "fastapi_response", response.getBody()
+            ));
+        } catch (RestClientException e) {
+            logger.error("FastAPI service health check failed: {}", e.getMessage());
+            return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)
+                    .body(Map.of(
+                        "status", "FastAPI service unavailable",
+                        "error", e.getMessage()
+                    ));
+        }
     }
 
     /**
-     * Endpoint to interact with FastAPI for getting video recommendations.
-     * 
-     * @param request The request payload containing user and video details.
-     * @return Response from FastAPI or an error message if an exception occurs.
+     * Get video recommendations
      */
     @PostMapping("/recommendations")
-    public ResponseEntity<?> getRecommendations(@RequestBody @Valid RecommendationRequest request) {
-        String url = FASTAPI_BASE_URL + "/recommendations"; // Target FastAPI endpoint
-        HttpHeaders headers = new HttpHeaders();
-        headers.setContentType(MediaType.APPLICATION_JSON); // Setting JSON content type
-        HttpEntity<RecommendationRequest> entity = new HttpEntity<>(request, headers); // Preparing request entity
-
+    public ResponseEntity<Object> getRecommendations(@RequestBody RecommendationRequest request) {
         try {
-            // Sending a POST request to the FastAPI endpoint
-            ResponseEntity<String> response = restTemplate.postForEntity(url, entity, String.class);
-            return ResponseEntity.ok(response.getBody()); // Returning the response body
-        } catch (HttpClientErrorException e) {
-            // Handling 4xx client-side errors
-            return ResponseEntity.status(e.getStatusCode())
-                    .body(Map.of("error", "FastAPI Client Error", "message", e.getResponseBodyAsString()));
-        } catch (HttpServerErrorException e) {
-            // Handling 5xx server-side errors
-            return ResponseEntity.status(e.getStatusCode())
-                    .body(Map.of("error", "FastAPI Server Error", "message", e.getResponseBodyAsString()));
-        } catch (ResourceAccessException e) {
-            // Handling connection-related issues
-            return ResponseEntity.status(503).body(Map.of("error", "Service Unavailable", "message", "FastAPI unreachable"));
+            // Validate request
+            if (request.getUser_id() <= 0 || request.getVideo_id() <= 0) {
+                return ResponseEntity.badRequest()
+                        .body(Map.of("error", "Invalid user_id or video_id"));
+            }
+
+            ResponseEntity<String> response = fastApiService.getRecommendations(request);
+            return ResponseEntity.ok(response.getBody());
+            
+        } catch (RestClientException e) {
+            logger.error("Recommendation request failed: {}", e.getMessage());
+            return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)
+                    .body(Map.of(
+                        "error", "Recommendation service unavailable",
+                        "message", e.getMessage()
+                    ));
         } catch (Exception e) {
-            // Handling any other unexpected exceptions
-            return ResponseEntity.status(500).body(Map.of("error", "Internal Server Error", "message", e.getMessage()));
+            logger.error("Unexpected error in recommendations: {}", e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("error", "Internal server error"));
         }
     }
 
     /**
-     * Endpoint to interact with FastAPI for content moderation.
-     * 
-     * @param request The request payload containing video content details.
-     * @return Response from FastAPI or an error message if an exception occurs.
+     * Moderate video content
      */
     @PostMapping("/moderation")
-    public ResponseEntity<?> moderateContent(@RequestBody @Valid ModerationRequest request) {
-        String url = FASTAPI_BASE_URL + "/moderation"; // Target FastAPI endpoint
-        HttpHeaders headers = new HttpHeaders();
-        headers.setContentType(MediaType.APPLICATION_JSON); // Setting JSON content type
-        HttpEntity<ModerationRequest> entity = new HttpEntity<>(request, headers); // Preparing request entity
-
+    public ResponseEntity<Object> moderateVideo(@RequestBody ModerationRequest request) {
         try {
-            // Sending a POST request to the FastAPI endpoint
-            ResponseEntity<String> response = restTemplate.postForEntity(url, entity, String.class);
-            return ResponseEntity.ok(response.getBody()); // Returning the response body
-        } catch (HttpClientErrorException e) {
-            // Handling 4xx client-side errors
-            return ResponseEntity.status(e.getStatusCode())
-                    .body(Map.of("error", "FastAPI Client Error", "message", e.getResponseBodyAsString()));
-        } catch (HttpServerErrorException e) {
-            // Handling 5xx server-side errors
-            return ResponseEntity.status(e.getStatusCode())
-                    .body(Map.of("error", "FastAPI Server Error", "message", e.getResponseBodyAsString()));
-        } catch (ResourceAccessException e) {
-            // Handling connection-related issues
-            return ResponseEntity.status(503).body(Map.of("error", "Service Unavailable", "message", "FastAPI unreachable"));
+            // Validate request
+            if (request.getVideo_id() <= 0) {
+                return ResponseEntity.badRequest()
+                        .body(Map.of("error", "Invalid video_id"));
+            }
+
+            ResponseEntity<String> response = fastApiService.moderateContent(request);
+            return ResponseEntity.ok(response.getBody());
+            
+        } catch (RestClientException e) {
+            logger.error("Moderation request failed: {}", e.getMessage());
+            return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)
+                    .body(Map.of(
+                        "error", "Moderation service unavailable",
+                        "message", e.getMessage()
+                    ));
         } catch (Exception e) {
-            // Handling any other unexpected exceptions
-            return ResponseEntity.status(500).body(Map.of("error", "Internal Server Error", "message", e.getMessage()));
+            logger.error("Unexpected error in moderation: {}", e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("error", "Internal server error"));
         }
     }
 
     /**
-     * Endpoint to interact with FastAPI for ad targeting.
-     * 
-     * @param request The request payload containing user and context details.
-     * @return Response from FastAPI or an error message if an exception occurs.
+     * Get ad targeting recommendations
      */
     @PostMapping("/ad-targeting")
-    public ResponseEntity<?> getAdTargeting(@RequestBody @Valid AdTargetingRequest request) {
-        String url = FASTAPI_BASE_URL + "/ad-targeting"; // Target FastAPI endpoint
-        HttpHeaders headers = new HttpHeaders();
-        headers.setContentType(MediaType.APPLICATION_JSON); // Setting JSON content type
-        HttpEntity<AdTargetingRequest> entity = new HttpEntity<>(request, headers); // Preparing request entity
-
+    public ResponseEntity<Object> getAdTargeting(@RequestBody AdTargetingRequest request) {
         try {
-            // Sending a POST request to the FastAPI endpoint
-            ResponseEntity<String> response = restTemplate.postForEntity(url, entity, String.class);
-            return ResponseEntity.ok(response.getBody()); // Returning the response body
-        } catch (HttpClientErrorException e) {
-            // Handling 4xx client-side errors
-            return ResponseEntity.status(e.getStatusCode())
-                    .body(Map.of("error", "FastAPI Client Error", "message", e.getResponseBodyAsString()));
-        } catch (HttpServerErrorException e) {
-            // Handling 5xx server-side errors
-            return ResponseEntity.status(e.getStatusCode())
-                    .body(Map.of("error", "FastAPI Server Error", "message", e.getResponseBodyAsString()));
-        } catch (ResourceAccessException e) {
-            // Handling connection-related issues
-            return ResponseEntity.status(503).body(Map.of("error", "Service Unavailable", "message", "FastAPI unreachable"));
+            // Validate request
+            if (request.getUser_id() <= 0 || request.getAge() <= 0) {
+                return ResponseEntity.badRequest()
+                        .body(Map.of("error", "Invalid user_id or age"));
+            }
+
+            ResponseEntity<String> response = fastApiService.getAdTargeting(request);
+            return ResponseEntity.ok(response.getBody());
+            
+        } catch (RestClientException e) {
+            logger.error("Ad targeting request failed: {}", e.getMessage());
+            return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)
+                    .body(Map.of(
+                        "error", "Ad targeting service unavailable",
+                        "message", e.getMessage()
+                    ));
         } catch (Exception e) {
-            // Handling any other unexpected exceptions
-            return ResponseEntity.status(500).body(Map.of("error", "Internal Server Error", "message", e.getMessage()));
-        }
-    }
-
-    // Inner classes for request payloads
-    public static class RecommendationRequest {
-        @NotNull
-        private String userId; // User ID for the recommendation request
-
-        // Getters and setters
-        public String getUserId() {
-            return userId;
-        }
-
-        public void setUserId(String userId) {
-            this.userId = userId;
-        }
-    }
-
-    public static class ModerationRequest {
-        @NotNull
-        private String content; // Video content to be moderated
-
-        // Getters and setters
-        public String getContent() {
-            return content;
-        }
-
-        public void setContent(String content) {
-            this.content = content;
-        }
-    }
-
-    public static class AdTargetingRequest {
-        @NotNull
-        private String userId; // User ID for ad targeting
-        private String context; // Context of the ad targeting request
-
-        // Getters and setters
-        public String getUserId() {
-            return userId;
-        }
-
-        public void setUserId(String userId) {
-            this.userId = userId;
-        }
-
-        public String getContext() {
-            return context;
-        }
-
-        public void setContext(String context) {
-            this.context = context;
+            logger.error("Unexpected error in ad targeting: {}", e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("error", "Internal server error"));
         }
     }
 }
